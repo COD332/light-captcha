@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "light-captcha"
+version = "0.0.1"
+description = "A lightweight CAPTCHA generator for Persian and English digits"
+readme = "README.md"
+authors = [{name = "Alireza Esameilzadeh"}]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Security",
+    "Topic :: Multimedia :: Graphics",
+]
+requires-python = ">=3.7"
+dependencies = ["Pillow>=8.0.0"]
+keywords = ["captcha", "persian", "english", "security", "image", "generation"]
+
+[project.urls]
+Homepage = "https://github.com/COD332/light-captcha"
+Repository = "https://github.com/COD332/light-captcha"
+Issues = "https://github.com/COD332/light-captcha/issues"
+
+[tool.setuptools]
+packages = ["light_captcha"]
+
+[tool.setuptools.package-data]
+light_captcha = ["fonts/*.ttf"]
