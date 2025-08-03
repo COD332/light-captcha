@@ -34,45 +34,34 @@ class CaptchaGenerator:
     
     def __init__(self):
         """Initialize the CAPTCHA generator."""
-        self.font_path = self._get_font_path()
+        self._font_data = self._load_font_data()
         
-    def _get_font_path(self):
-        """Get the path to the Vazirmatn font using proper resource loading."""
+    def _load_font_data(self):
+        """Load font data into memory for reliable access."""
         try:
             # Try using importlib.resources (Python 3.9+)
             try:
                 font_ref = resources.files('light_captcha.fonts').joinpath('Vazirmatn-Regular.ttf')
-                if hasattr(font_ref, '__enter__'):  # Context manager support
-                    return font_ref
-                else:
-                    # For older versions, extract to temporary location
-                    with resources.as_file(font_ref) as font_path:
-                        return str(font_path)
+                return font_ref.read_bytes()
             except AttributeError:
                 # Fallback for older Python versions
                 import pkg_resources
-                font_path = pkg_resources.resource_filename('light_captcha', 'fonts/Vazirmatn-Regular.ttf')
-                if os.path.exists(font_path):
-                    return font_path
-                raise FileNotFoundError(f"Font file not found via pkg_resources: {font_path}")
-        except (ImportError, FileNotFoundError):
-            # Final fallback to relative path
+                font_data = pkg_resources.resource_string('light_captcha', 'fonts/Vazirmatn-Regular.ttf')
+                return font_data
+        except (ImportError, FileNotFoundError, ModuleNotFoundError):
+            # Final fallback to file system
             current_dir = os.path.dirname(os.path.abspath(__file__))
             font_path = os.path.join(current_dir, 'fonts', 'Vazirmatn-Regular.ttf')
             
-            if not os.path.exists(font_path):
+            if os.path.exists(font_path):
+                with open(font_path, 'rb') as f:
+                    return f.read()
+            else:
                 raise FileNotFoundError(f"Font file not found: {font_path}")
-                
-            return font_path
     
     def _load_font(self, size):
-        """Load font with proper resource handling."""
-        font_resource = self.font_path
-        if hasattr(font_resource, '__enter__'):  # Context manager
-            with font_resource as font_path:
-                return ImageFont.truetype(str(font_path), size)
-        else:
-            return ImageFont.truetype(font_resource, size)
+        """Load font from memory data."""
+        return ImageFont.truetype(io.BytesIO(self._font_data), size)
             
     def _generate_number(self):
         """Generate a 6-digit number using millisecond-based seed."""
