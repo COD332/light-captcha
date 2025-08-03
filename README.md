@@ -12,6 +12,8 @@ A lightweight Python library for generating CAPTCHA images with Persian (۰-۹) 
 - 🎨 Random color schemes
 - 🔧 Enhanced noise and interference patterns
 - 📐 Customizable image dimensions
+- 🖼️ **NEW in v0.0.2**: Output format options (PIL Image or base64)
+- 🔧 **NEW in v0.0.2**: Improved font resource loading for better cross-platform compatibility
 
 ## Installation
 
@@ -27,18 +29,30 @@ from light_captcha import CaptchaGenerator
 # Create generator instance
 generator = CaptchaGenerator()
 
-# Generate English CAPTCHA
+# Generate English CAPTCHA as PIL Image (default)
 image, number = generator.generate('english')
 image.save('captcha_english.png')
 print(f"Generated number: {number}")
 
-# Generate Persian CAPTCHA
-image, number = generator.generate('persian')
-image.save('captcha_persian.png')
+# Generate Persian CAPTCHA as base64 string
+base64_str, number = generator.generate('persian', output='base64')
 print(f"Generated number: {number}")
+print(f"Base64 data: {base64_str[:50]}...")
 ```
 
 ## Usage Examples
+
+### Output Format Options (New in v0.0.2)
+
+```python
+# Generate as PIL Image object (default)
+image, number = generator.generate('english', output='image')
+image.save('captcha.png')
+
+# Generate as base64 string for web applications
+base64_str, number = generator.generate('english', output='base64')
+html_img = f'<img src="data:image/png;base64,{base64_str}" alt="CAPTCHA">'
+```
 
 ### Custom Dimensions
 
@@ -56,8 +70,26 @@ text_color = (25, 25, 112)   # Navy text
 image, number = generator.generate(
     'english', 
     bg_color=bg_color, 
-    text_color=text_color
+    text_color=text_color,
+    output='image'
 )
+```
+
+### Web Application Integration
+
+```python
+generator = CaptchaGenerator()
+
+# For APIs and web frameworks
+base64_captcha, correct_answer = generator.generate(
+    language='english',
+    width=250, 
+    height=80,
+    output='base64'
+)
+
+# Store correct_answer in session for validation
+# Send base64_captcha to frontend
 ```
 
 ### Batch Generation
@@ -65,10 +97,17 @@ image, number = generator.generate(
 ```python
 generator = CaptchaGenerator()
 
-# Generate multiple CAPTCHAs
-for i in range(10):
-    image, number = generator.generate('persian')
-    image.save(f'captcha_{i}.png')
+# Generate multiple CAPTCHAs with different formats
+for i in range(5):
+    # Image format
+    image, number = generator.generate('persian', output='image')
+    image.save(f'captcha_img_{i}.png')
+    
+    # Base64 format  
+    base64_str, number = generator.generate('english', output='base64')
+    with open(f'captcha_b64_{i}.txt', 'w') as f:
+        f.write(base64_str)
+    
     print(f"CAPTCHA {i}: {number}")
 ```
 
@@ -76,7 +115,7 @@ for i in range(10):
 
 ### CaptchaGenerator
 
-#### `generate(language, width=250, height=80, bg_color=None, text_color=None)`
+#### `generate(language, width=250, height=80, bg_color=None, text_color=None, output='image')`
 
 Generate a CAPTCHA image.
 
@@ -86,13 +125,31 @@ Generate a CAPTCHA image.
 - `height` (int): Image height in pixels (default: 80)  
 - `bg_color` (tuple, optional): RGB background color
 - `text_color` (tuple, optional): RGB text color
+- `output` (str): `'image'` for PIL Image object or `'base64'` for base64 string (default: 'image')
 
 **Returns:**
-- `tuple`: (PIL Image object, 6-digit string)
+- `tuple`: (PIL Image object or base64 string, 6-digit string)
 
 **Raises:**
 - `ValueError`: If language is not 'english' or 'persian'
+- `ValueError`: If output is not 'image' or 'base64'  
 - `FileNotFoundError`: If required font file is missing
+
+## What's New in v0.0.2
+
+### Enhanced Font Loading
+- Improved font resource loading using `importlib.resources` for better cross-platform compatibility
+- Automatic fallback mechanisms for different Python versions
+- Resolves PIL font format errors when package is installed system-wide
+
+### Output Format Options
+- **Image Output**: Returns PIL Image object (default, backward compatible)
+- **Base64 Output**: Returns base64-encoded PNG string for direct web integration
+
+### Better Error Handling
+- More descriptive error messages for font loading issues
+- Validation for output format parameter
+- Improved cross-platform compatibility
 
 ## Security Features
 
@@ -107,6 +164,7 @@ Generate a CAPTCHA image.
 
 - Python 3.7+
 - Pillow >= 8.0.0
+- importlib_resources >= 1.3.0 (for Python < 3.9)
 
 ## License
 

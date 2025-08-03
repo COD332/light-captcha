@@ -2,6 +2,13 @@ import random
 import math
 import time
 import os
+import base64
+import io
+try:
+    from importlib import resources
+except ImportError:
+    # Python < 3.9 fallback
+    import importlib_resources as resources
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -30,15 +37,43 @@ class CaptchaGenerator:
         self.font_path = self._get_font_path()
         
     def _get_font_path(self):
-        """Get the path to the Vazirmatn font."""
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        font_path = os.path.join(current_dir, 'fonts', 'Vazirmatn-Regular.ttf')
-        
-        if not os.path.exists(font_path):
-            raise FileNotFoundError(f"Font file not found: {font_path}")
+        """Get the path to the Vazirmatn font using proper resource loading."""
+        try:
+            # Try using importlib.resources (Python 3.9+)
+            try:
+                font_ref = resources.files('light_captcha.fonts').joinpath('Vazirmatn-Regular.ttf')
+                if hasattr(font_ref, '__enter__'):  # Context manager support
+                    return font_ref
+                else:
+                    # For older versions, extract to temporary location
+                    with resources.as_file(font_ref) as font_path:
+                        return str(font_path)
+            except AttributeError:
+                # Fallback for older Python versions
+                import pkg_resources
+                font_path = pkg_resources.resource_filename('light_captcha', 'fonts/Vazirmatn-Regular.ttf')
+                if os.path.exists(font_path):
+                    return font_path
+                raise FileNotFoundError(f"Font file not found via pkg_resources: {font_path}")
+        except (ImportError, FileNotFoundError):
+            # Final fallback to relative path
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            font_path = os.path.join(current_dir, 'fonts', 'Vazirmatn-Regular.ttf')
             
-        return font_path
+            if not os.path.exists(font_path):
+                raise FileNotFoundError(f"Font file not found: {font_path}")
+                
+            return font_path
     
+    def _load_font(self, size):
+        """Load font with proper resource handling."""
+        font_resource = self.font_path
+        if hasattr(font_resource, '__enter__'):  # Context manager
+            with font_resource as font_path:
+                return ImageFont.truetype(str(font_path), size)
+        else:
+            return ImageFont.truetype(font_resource, size)
+            
     def _generate_number(self):
         """Generate a 6-digit number using millisecond-based seed."""
         seed = int(time.time() * 1000) % 1000000
@@ -115,7 +150,7 @@ class CaptchaGenerator:
     def _draw_skewed_digits(self, image, digits, font_size, text_color):
         """Draw digits with random skewing and distortion."""
         width, height = image.size
-        font = ImageFont.truetype(self.font_path, font_size)
+        font = self._load_font(font_size)
         
         # Calculate total text width for centering
         total_width = 0
@@ -140,7 +175,7 @@ class CaptchaGenerator:
             
             # Random size variation
             size_factor = random.uniform(0.8, 1.2)
-            digit_font = ImageFont.truetype(self.font_path, int(font_size * size_factor))
+            digit_font = self._load_font(int(font_size * size_factor))
             
             # Draw digit with vertical centering
             bbox = digit_font.getbbox(digit)
@@ -163,7 +198,7 @@ class CaptchaGenerator:
             current_x += digit_widths[i] + spacing
     
     def generate(self, language='english', width=250, height=80, 
-                bg_color=None, text_color=None):
+                bg_color=None, text_color=None, output='image'):
         """
         Generate a CAPTCHA image.
         
@@ -173,12 +208,16 @@ class CaptchaGenerator:
             height (int): Image height in pixels  
             bg_color (tuple): RGB background color (optional)
             text_color (tuple): RGB text color (optional)
+            output (str): 'image' for PIL Image object or 'base64' for base64 string
             
         Returns:
-            tuple: (PIL Image object, digit string)
+            tuple: (PIL Image object or base64 string, digit string)
         """
         if language not in ['english', 'persian']:
             raise ValueError("Language must be 'english' or 'persian'")
+            
+        if output not in ['image', 'base64']:
+            raise ValueError("Output must be 'image' or 'base64'")
         
         # Generate number and convert if needed
         number = self._generate_number()
@@ -204,4 +243,11 @@ class CaptchaGenerator:
         final_image = Image.new('RGB', (width, height), bg_color)
         final_image.paste(image, mask=image.split()[-1])
         
-        return final_image, number
+        # Return based on output format
+        if output == 'base64':
+            buffer = io.BytesIO()
+            final_image.save(buffer, format='PNG')
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            return img_str, number
+        else:
+            return final_image, number

@@ -39,6 +39,9 @@ setup(
         "Topic :: Multimedia :: Graphics",
     ],
     python_requires=">=3.7",
-    install_requires=["Pillow>=8.0.0"],
+    install_requires=[
+        "Pillow>=8.0.0",
+        "importlib_resources>=1.3.0; python_version<'3.9'"
+    ],
     keywords=["captcha", "persian", "english", "security", "image", "generation"],
 )
